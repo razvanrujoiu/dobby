@@ -324,12 +324,13 @@
                 if (job.gold && !jobs[i].gold || (job.gold == jobs[i].gold && job.distance < jobs[i].distance)) {
                     jobs.splice(i,1);
                     jobs.push(job);
+                    return;
                 }
                 if(job.silver && !jobs[i].silver || (job.silver == jobs[i].silver && job.distance < jobs[i].distance)) {
                     jobs.splice(i,1);
                     jobs.push(job);
+                    return;
                 }
-                return;
             }
         }
         jobs.push(job);
