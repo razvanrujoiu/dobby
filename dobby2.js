@@ -285,13 +285,17 @@
     Dobby.getJobName = function(id) {
         return JobList.getJobById(id).name;
     };
-    Dobby.getJobIcon = function(silver,id,x,y) {
+    Dobby.getJobIcon = function(silver,gold,id,x,y) {
         var html ='<div class="centermap" onclick="GameMap.center(' + x + ',' + y + ');"style="position: absolute;background-image: url(\'../images/map/icons/instantwork.png\');width: 20px;height: 20px;top: 0;right: 3px;cursor: pointer;"></div>';
         var silverHtml = "";
+        var goldHtml = ""; 
+        if (gold) {
+            goldHtml = '<div class="featured gold"></div>';
+        } 
         if(silver) {
              silverHtml = '<div class="featured silver"></div>';
          }
-        return'<div class="job" style="left: 0; top: 0; position: relative;"><div  onclick="" class="featured"></div>' + silverHtml + html + '<img src="../images/jobs/' + JobList.getJobById(id).shortname + '.png" class="job_icon"></div>';
+        return'<div class="job" style="left: 0; top: 0; position: relative;"><div  onclick="" class="featured"></div>' + goldHtml + silverHtml + html + '<img src="../images/jobs/' + JobList.getJobById(id).shortname + '.png" class="job_icon"></div>';
     };
     Dobby.getConsumableIcon = function(src) {
         return "<div><img src ="+ src + "></div>";
@@ -317,7 +321,11 @@
     Dobby.compareUniqueJobs = function(job,jobs){
         for(var i = 0 ; i < jobs.length;i++) {
             if(jobs[i].id == job.id) {
-                if(job.silver && !jobs[i].silver || (job.silver == jobs[i].silver &&job.distance < jobs[i].distance)) {
+                if (job.gold && !jobs[i].gold || (job.gold == jobs[i].gold && job.distance < jobs[i].distance)) {
+                    jobs.splice(i,1);
+                    jobs.push(job);
+                }
+                if(job.silver && !jobs[i].silver || (job.silver == jobs[i].silver && job.distance < jobs[i].distance)) {
                     jobs.splice(i,1);
                     jobs.push(job);
                 }
@@ -340,6 +348,10 @@
             var xp = data.basis.short.experience;
             var money = data.basis.short.money;
             currentJob.setMotivation(data.jobmotivation*100);
+            if(currentJob.gold) {
+                xp = Math.ceil(2*xp);
+                money = Math.ceil(2*money);
+            }
             if(currentJob.silver) {
                 xp = Math.ceil(1.5*xp);
                 money = Math.ceil(1.5*money);
@@ -374,6 +386,9 @@
             currentJob.silver = isSilver;
             currentJob.gold = isGold;
             currentJob.calculateDistance();
+            if (!isGold && Dobby.jobFilter.filterOnlyGold) {
+                continue;
+            }
             if(isSilver && Dobby.jobFilter.filterNoSilver) {
                 continue;
             }
@@ -1122,6 +1137,7 @@
                 for(var j = 0 ; j < tmpAddedJobs.length;j++) {
                     var jobP = new JobPrototype(tmpAddedJobs[j].x,tmpAddedJobs[j].y,tmpAddedJobs[j].id);
                     jobP.setSilver(tmpAddedJobs[j].silver);
+                    jobP.setGold(tmpAddedJobs[j].gold);
                     jobP.distance = tmpAddedJobs[j].distance;
                     jobP.setExperience(tmpAddedJobs[j].experience);
                     jobP.setMoney(tmpAddedJobs[j].money);
@@ -1287,7 +1303,7 @@
     };
     Dobby.createJobsTab = function() {
         var htmlSkel = $("<div id = \'jobs_overview'\></div>");
-        var html = $("<div class = \'jobs_search'\ style=\'position:relative;'\><div id=\'jobFilter'\style=\'position:absolute;top:10px;left:15px'\></div><div id=\'job_only_silver'\style=\'position:absolute;top:10px;left:200px;'\></div><div id=\'job_no_silver'\style=\'position:absolute;top:10px;left:270px;'\></div><div id=\'job_center'\style=\'position:absolute;top:10px;left:350px;'\></div><div id=\'button_filter_jobs'\style=\'position:absolute;top:5px;left:450px;'\></div></div>");
+        var html = $("<div class = \'jobs_search'\ style=\'position:relative;'\><div id=\'jobFilter'\style=\'position:absolute;top:10px;left:15px'\></div><div id=\'job_only_silver'\style=\'position:absolute;top:10px;left:200px;'\></div><div id=\'job_only_gold'\style=\'position:absolute;top:10px;left:270px;'\></div><div id=\'job_center'\style=\'position:absolute;top:10px;left:350px;'\></div><div id=\'button_filter_jobs'\style=\'position:absolute;top:5px;left:450px;'\></div></div>");
         var table = new west.gui.Table();
         var xpIcon = '<img src="/images/icons/star.png">';
         var dollarIcon = '<img src="/images/icons/dollar.png">';
@@ -1298,7 +1314,16 @@
         table.addColumn("jobIcon","jobIcon").addColumn("jobName","jobName").addColumn("jobXp","jobXp").addColumn("jobMoney","jobMoney").addColumn("jobMotivation","jobMotivation").addColumn("jobDistance","jobDistance").addColumn("jobAdd","jobAdd");
         table.appendToCell("head","jobIcon","Job icon").appendToCell("head","jobName","Job name").appendToCell("head","jobXp",xpIcon + (Dobby.sortJobTableXp == 1 ? arrow_asc : Dobby.sortJobTableXp == -1 ? arrow_desc : "")).appendToCell("head","jobMoney",dollarIcon).appendToCell("head","jobMotivation",motivationIcon).appendToCell("head","jobDistance","Distance " + (Dobby.sortJobTableDistance == 1 ? arrow_asc : Dobby.sortJobTableDistance == -1 ? arrow_desc : "")).appendToCell("head","jobAdd","");
         for(var job = 0 ; job < uniqueJobs.length;job++) {
-            table.appendRow().appendToCell(-1,"jobIcon",Dobby.getJobIcon(uniqueJobs[job].silver,uniqueJobs[job].id,uniqueJobs[job].x,uniqueJobs[job].y)).appendToCell(-1,"jobName",Dobby.getJobName(uniqueJobs[job].id)).appendToCell(-1,"jobXp",uniqueJobs[job].experience).appendToCell(-1,"jobMoney",uniqueJobs[job].money).appendToCell(-1,"jobMotivation",uniqueJobs[job].motivation).appendToCell(-1,"jobDistance",uniqueJobs[job].distance.formatDuration()).appendToCell(-1,"jobAdd",Dobby.createAddJobButton(uniqueJobs[job].x,uniqueJobs[job].y,uniqueJobs[job].id));
+            table.appendRow().appendToCell(-1,"jobIcon",Dobby.getJobIcon(uniqueJobs[job].silver, 
+                uniqueJobs[job].gold,
+                 uniqueJobs[job].id,uniqueJobs[job].x,
+                 uniqueJobs[job].y))
+                 .appendToCell(-1,"jobName",Dobby.getJobName(uniqueJobs[job].id))
+                 .appendToCell(-1,"jobXp",uniqueJobs[job].experience)
+                 .appendToCell(-1,"jobMoney",uniqueJobs[job].money)
+                 .appendToCell(-1,"jobMotivation",uniqueJobs[job].motivation)
+                 .appendToCell(-1,"jobDistance",uniqueJobs[job].distance.formatDuration())
+                 .appendToCell(-1,"jobAdd",Dobby.createAddJobButton(uniqueJobs[job].x,uniqueJobs[job].y,uniqueJobs[job].id));
         }
         var textfield = new west.gui.Textfield("jobsearch").setPlaceholder("Select job name");
         if(Dobby.jobFilter.filterJob != "") {
@@ -1378,7 +1403,15 @@
         table.addColumn("jobIcon","jobIcon").addColumn("jobName","jobName").addColumn("jobStopMotivation","jobStopMotivation").addColumn("jobSet","jobSet").addColumn("jobRemove","jobRemove");
         table.appendToCell("head","jobIcon","Job icon").appendToCell("head","jobName","Job name").appendToCell("head","jobStopMotivation","Stop motivation").appendToCell("head","jobSet","Job set").appendToCell("head","jobRemove","");
         for(var job = 0; job < Dobby.addedJobs.length;job++) {
-            table.appendRow().appendToCell(-1,"jobIcon",Dobby.getJobIcon(Dobby.addedJobs[job].silver,Dobby.addedJobs[job].id,Dobby.addedJobs[job].x,Dobby.addedJobs[job].y)).appendToCell(-1,"jobName",Dobby.getJobName(Dobby.addedJobs[job].id)).appendToCell(-1,"jobStopMotivation",Dobby.createMinMotivationTextfield(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id,Dobby.addedJobs[job].stopMotivation)).appendToCell(-1,"jobSet",Dobby.createComboxJobSets(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id)).appendToCell(-1,"jobRemove",Dobby.createRemoveJobButton(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id));
+            table.appendRow().appendToCell(-1,"jobIcon",Dobby.getJobIcon(Dobby.addedJobs[job].silver, 
+                Dobby.addedJobs[job].gold,
+                 Dobby.addedJobs[job].id,
+                 Dobby.addedJobs[job].x,
+                 Dobby.addedJobs[job].y))
+                 .appendToCell(-1,"jobName",Dobby.getJobName(Dobby.addedJobs[job].id))
+                 .appendToCell(-1,"jobStopMotivation",Dobby.createMinMotivationTextfield(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id,Dobby.addedJobs[job].stopMotivation))
+                 .appendToCell(-1,"jobSet",Dobby.createComboxJobSets(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id))
+                 .appendToCell(-1,"jobRemove",Dobby.createRemoveJobButton(Dobby.addedJobs[job].x,Dobby.addedJobs[job].y,Dobby.addedJobs[job].id));
         }
         var buttonStart = new west.gui.Button("Start",function() {
             var parseSuccesfull = Dobby.parseStopMotivation();
